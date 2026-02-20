@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Game Theory Strategy Simulator</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+body{font-family:Roboto,Arial,sans-serif;background:#f1f3f4;margin:0;color:#202124}
+header{background:#fff;border-bottom:1px solid #dadce0;padding:16px 28px;font-size:22px;font-weight:500}
+.container{max-width:1100px;margin:26px auto;padding:0 18px}
+.card{background:#fff;border:1px solid #dadce0;border-radius:12px;padding:22px;margin-bottom:22px}
+h2{font-size:20px;margin-top:0}
+.small{color:#5f6368;font-size:14px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+select,input{width:100%;padding:9px;border-radius:8px;border:1px solid #dadce0;margin-top:6px}
+button{background:#1a73e8;color:white;border:none;border-radius:8px;padding:10px 16px;margin-top:14px;font-weight:500;cursor:pointer}
+button:hover{background:#1765cc}
+.result{background:#e8f0fe;border-radius:8px;padding:12px;margin-top:14px}
+table{border-collapse:collapse;width:100%;margin-top:12px}
+th,td{border:1px solid #dadce0;padding:8px;text-align:center}
+th{background:#f8f9fa}
+canvas{margin-top:18px;background:#fff;border:1px solid #dadce0;border-radius:10px;padding:10px}
+</style>
+</head>
+<body>
+<header>Strategy & Game Theory Assignment Simulator</header>
+<div class="container">
+
+<!-- ENTRY GAME -->
+<div class="card">
+<h2>Scenario 1 – Entry Game (Rapido vs Namma Yatri style)</h2>
+<p class="small">Entrant chooses Enter/Stay Out. Incumbent chooses Fight or Accommodate.</p>
+
+<div class="grid">
+<div>
+<label>Entrant strategy</label>
+<select id="entrant">
+<option>Enter</option>
+<option>Stay Out</option>
+</select>
+</div>
+<div>
+<label>Incumbent response</label>
+<select id="incumbent">
+<option>Accommodate</option>
+<option>Fight</option>
+</select>
+</div>
+</div>
+
+<button onclick="runEntry()">Run Simulation</button>
+
+<div id="entryResult" class="result"></div>
+
+<h3>Payoff Matrix</h3>
+<table id="matrix">
+<tr><th></th><th>Fight</th><th>Accommodate</th></tr>
+<tr><th>Stay Out</th><td>(0 , 8)</td><td>(0 , 8)</td></tr>
+<tr><th>Enter</th><td>(1 , -5)</td><td>(6 , 5)</td></tr>
+</table>
+
+<canvas id="heatmap" height="120"></canvas>
+</div>
+
+<!-- PRICING STRATEGY -->
+<div class="card">
+<h2>Scenario 2 – Professional Pricing Strategy Logic</h2>
+<div class="grid">
+<div>
+<label>Demand vs Capacity</label>
+<select id="capacity">
+<option value="scarce">Demand greater than capacity</option>
+<option value="balanced">Both firms can supply market</option>
+<option value="excess">Excess inventory</option>
+</select>
+</div>
+<div>
+<label>Competitor move</label>
+<select id="competitor">
+<option value="stable">Stable pricing</option>
+<option value="undercut">Aggressive undercut</option>
+<option value="unknown">Unknown costs</option>
+</select>
+</div>
+<div>
+<label>Minimum margin rule</label>
+<select id="margin">
+<option value="safe">Maintain safe margin</option>
+<option value="temporary">Temporary low margin allowed</option>
+<option value="danger">Near-zero defensive pricing</option>
+</select>
+</div>
+<div>
+<label>Incumbent strength</label>
+<select id="entryBarrier">
+<option value="normal">Normal</option>
+<option value="dominant">Dominant brand + cost advantage</option>
+<option value="cheap">Very low-price incumbent</option>
+</select>
+</div>
+</div>
+<button onclick="runPricing()">Evaluate</button>
+<div id="pricingResult" class="result"></div>
+<canvas id="profitChart" height="120"></canvas>
+</div>
+
+<!-- REPEATED GAME -->
+<div class="card">
+<h2>Scenario 3 – Repeated Competition (Iterated Prisoner's Dilemma)</h2>
+<div class="grid">
+<div>
+<label>Your rule</label>
+<select id="you">
+<option value="tft">Tit-for-Tat</option>
+<option value="coop">Always Accommodate</option>
+<option value="def">Always Fight</option>
+<option value="grim">Grim Trigger</option>
+</select>
+</div>
+<div>
+<label>Competitor rule</label>
+<select id="rival">
+<option value="tft">Tit-for-Tat</option>
+<option value="coop">Always Accommodate</option>
+<option value="def">Always Fight</option>
+<option value="random">Random</option>
+</select>
+</div>
+<div>
+<label>Rounds</label>
+<input id="rounds" type="number" value="10" min="1" max="50">
+</div>
+</div>
+<button onclick="runRepeated()">Run Game</button>
+<div id="repeatedResult" class="result"></div>
+</div>
+
+</div>
+
+<script>
+// ENTRY GAME + HEATMAP
+let heatChart;
+function runEntry(){
+const e=entrant.value;
+const i=incumbent.value;
+let payoff;
+if(e==='Stay Out') payoff=[0,8];
+else if(i==='Fight') payoff=[1,-5];
+else payoff=[6,5];
+entryResult.innerHTML=`Outcome payoff → Entrant: <b>${payoff[0]}</b>, Incumbent: <b>${payoff[1]}</b>`;
+
+const sums=[8,8,-4,11];
+const ctx=document.getElementById('heatmap');
+if(heatChart) heatChart.destroy();
+heatChart=new Chart(ctx,{type:'bar',data:{labels:['StayOut-Fight','StayOut-Accom','Enter-Fight','Enter-Accom'],datasets:[{label:'Joint Payoff',data:sums}]},options:{plugins:{legend:{display:false}}}});
+}
+
+// PRICING LOGIC + GRAPH
+let profitChart;
+function runPricing(){
+let score=50;
+let notes=[];
+if(capacity.value==='scarce'){score+=25;notes.push('Scarcity allows higher pricing power.');}
+if(capacity.value==='excess'){score-=20;notes.push('Excess stock weakens bargaining power.');}
+if(competitor.value==='undercut'){score-=15;notes.push('Aggressive rival reduces margins.');}
+if(competitor.value==='unknown'){score-=5;notes.push('Uncertain rival costs → cautious pricing.');}
+if(margin.value==='safe'){score+=10;notes.push('Safe margin protects long-term profit.');}
+if(margin.value==='danger'){score-=25;notes.push('Near-zero margin is unsustainable.');}
+if(entryBarrier.value==='dominant'){score-=30;notes.push('Dominant incumbent makes market unattractive.');}
+
+pricingResult.innerHTML=notes.map(n=>'• '+n).join('<br>')+`<br><br><b>Market attractiveness score: ${score}</b>`;
+
+const ctx=document.getElementById('profitChart');
+if(profitChart) profitChart.destroy();
+profitChart=new Chart(ctx,{type:'line',data:{labels:['Worst','Risky','Neutral','Good','Strong'],datasets:[{label:'Profit Potential',data:[10,30,50,70,score]}]},options:{plugins:{legend:{display:false}}}});
+}
+
+// REPEATED GAME
+function action(rule,oppPrev,grim){
+if(rule==='coop') return 'A';
+if(rule==='def') return 'F';
+if(rule==='random') return Math.random()<0.5?'A':'F';
+if(rule==='tft') return oppPrev||'A';
+if(rule==='grim') return grim?'F':'A';
+}
+function runRepeated(){
+let r=parseInt(rounds.value);
+let yPrev=null,oPrev=null,gY=false,gO=false;
+let html='<table><tr><th>Round</th><th>You</th><th>Rival</th></tr>';
+for(let i=1;i<=r;i++){
+let y=action(you.value,oPrev,gY);
+let o=action(rival.value,yPrev,gO);
+if(you.value==='grim' && oPrev==='F') gY=true;
+if(rival.value==='grim' && yPrev==='F') gO=true;
+html+=`<tr><td>${i}</td><td>${y==='A'?'Accommodate':'Fight'}</td><td>${o==='A'?'Accommodate':'Fight'}</td></tr>`;
+yPrev=y;oPrev=o;
+}
+html+='</table>';
+repeatedResult.innerHTML=html;
+}
+</script>
+</body>
+</html>
